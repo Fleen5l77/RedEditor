@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <script src="fs.js"></script>
+    <meta charset="UTF-8">
+    <title>RedEditor IDE</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/edit/closetag.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/hint/javascript-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/hint/css-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/hint/html-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/foldcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/foldgutter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/brace-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/xml-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/indent-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/comment-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/lint/lint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/lint/javascript-lint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jshint/2.13.6/jshint.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/theme/monokai.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/foldgutter.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/hint/show-hint.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/lint/lint.min.css">
+    <style>
+        :root {
+            --bg: #1e1e1e;
+            --sidebar: #23272e;
+            --toolbar: #23272e;
+            --editor: #1e1e1e;
+            --text: #d4d4d4;
+            --accent: #e63946;
+            --border: #333;
+        }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); }
+        #toolbar {
+            height: 44px;
+            background: var(--toolbar);
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding: 0 16px;
+        }
+        #toolbar .logo { font-weight: bold; font-size: 18px; color: var(--accent); margin-right: 24px; }
+        #toolbar button {
+            background: none; border: none; color: var(--text); font-size: 15px; margin-right: 12px; cursor: pointer; padding: 6px 12px; border-radius: 4px;
+        }
+        #toolbar button:hover { background: #2a2d32; }
+        #main {
+            display: flex; height: calc(100vh - 44px);
+        }
+        #sidebar {
+            width: 220px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 8px 0; display: flex; flex-direction: column;
+        }
+        #sidebar h3 { color: var(--accent); font-size: 13px; margin: 12px 0 4px 18px; font-weight: 600; }
+        #file-list { flex: 1; overflow-y: auto; }
+        .file-item {
+            padding: 6px 18px; cursor: pointer; font-size: 14px; border-left: 3px solid transparent; display: flex; align-items: center;
+        }
+        .file-item.selected { background: #23272e; border-left: 3px solid var(--accent); color: var(--accent); }
+        .file-item:hover { background: #252930; }
+        .file-type-html { color: #569cd6; }
+        .file-type-css { color: #6a9955; }
+        .file-type-js { color: #d7ba7d; }
+        .file-type-image { color: #c586c0; }
+        .file-type-icon { color: #4ec9b0; }
+        #content {
+            flex: 1; display: flex; flex-direction: column; background: var(--editor);
+        }
+        #tabs {
+            height: 36px; display: flex; align-items: end; border-bottom: 1px solid var(--border); background: #23272e;
+        }
+        .tab {
+            padding: 8px 18px 6px 18px; cursor: pointer; color: var(--text); font-size: 14px; border-top-left-radius: 6px; border-top-right-radius: 6px; margin-right: 2px;
+        }
+        .tab.selected { background: var(--editor); color: var(--accent); border-bottom: 2px solid var(--editor); }
+        .tab:not(.selected) { background: #23272e; border-bottom: 2px solid var(--border); }
+        #editor-area {
+            flex: 1;
+            display: none;
+            height: 100%;
+            min-height: 0;
+        }
+        #editor-area.active {
+            display: block;
+        }
+        #editor-box {
+            height: 100%;
+            position: relative;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .CodeMirror {
+            height: 100% !important;
+            min-height: 0;
+            flex: 1 1 auto;
+        }
+        #preview-area, #about-area { flex: 1; display: none; height: 100%; }
+        #preview-area.active, #about-area.active { display: block; }
+        #preview-frame { width: 100%; height: 100%; border: none; background: #fff; }
+        #about-content { padding: 20px; font-size: 15px; }
+        #about-content h2 { color: var(--accent); margin-top: 0; }
+        #about-content p { margin: 10px 0; }
+        ::selection { background: #264f78; }
+        ::-webkit-scrollbar { width: 8px; background: #23272e; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        #right-panel {
+            width: 0;
+            background: var(--sidebar);
+            border-left: 1px solid var(--border);
+            transition: width 0.2s;
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+        }
+        #right-panel.open { width: 400px; }
+        #right-panel-tabs { display: flex; border-bottom: 1px solid var(--border); }
+        .right-tab {
+            flex: 1;
+            padding: 10px 0;
+            text-align: center;
+            cursor: pointer;
+            background: var(--sidebar);
+            color: var(--text);
+            border: none;
+            font-size: 15px;
+            outline: none;
+        }
+        .right-tab.selected { background: var(--editor); color: var(--accent); }
+        #right-panel-content { flex: 1; overflow-y: auto; padding: 18px; }
+        #right-panel-toggle {
+            position: absolute;
+            left: -32px;
+            top: 20px;
+            width: 32px;
+            height: 32px;
+            background: var(--sidebar);
+            border: 1px solid var(--border);
+            border-radius: 6px 0 0 6px;
+            color: var(--accent);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            font-size: 18px;
+        }
+        #ai-result, #ai-code { width: 100%; min-height: 60px; background: var(--editor); color: var(--text); border: 1px solid var(--border); border-radius: 4px; margin-top: 10px; padding: 8px; font-family: inherit; font-size: 15px; }
+        #ai-code { display: none; white-space: pre-wrap; }
+        #ai-showcode, #ai-apply { margin-top: 10px; }
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background: var(--sidebar);
+            min-width: 160px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            z-index: 100;
+            top: 100%;
+            left: 0;
+        }
+        .dropdown-content button {
+            width: 100%;
+            text-align: left;
+            padding: 8px 16px;
+            margin: 0;
+            border-radius: 0;
+        }
+        .dropdown-content button:hover { background: #2a2d32; }
+        .dropdown:hover .dropdown-content { display: block; }
+        #file-dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--sidebar);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            z-index: 200;
+            width: 300px;
+        }
+        #file-dialog input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            background: var(--editor);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 15px;
+        }
+        #file-dialog button {
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+<div id="toolbar">
+    <span class="logo">RedEditor IDE</span>
+    <div class="dropdown">
+        <button>Файл</button>
+        <div class="dropdown-content">
+            <button onclick="showFileDialog('open-pc')">Открыть с ПК</button>
+            <button onclick="showFileDialog('open-fs')">Открыть из ФС</button>
+            <button onclick="showFileDialog('save-pc')">Сохранить на ПК</button>
+            <button onclick="showFileDialog('save-fs')">Сохранить в ФС</button>
+        </div>
+    </div>
+    <button onclick="installModule()">Установить модуль</button>
+    <input type="file" id="moduleInput" accept=".js" style="display:none;">
+    <button onclick="toggleRightPanel()">Панель</button>
+    <input type="file" id="fileInput" style="display:none;">
+    <span style="flex:1"></span>
+    <span id="projectName" style="opacity:0.7;font-size:13px;"></span>
+</div>
+<div id="main">
+    <div id="sidebar">
+        <div id="file-list"></div>
+    </div>
+    <div id="content">
+        <div id="tabs">
+            <div class="tab selected" id="tab-editor" onclick="showTab('editor')">Редактор</div>
+            <div class="tab" id="tab-preview" onclick="showTab('preview')">Предпросмотр</div>
+            <div class="tab" id="tab-about" onclick="showTab('about')">О программе</div>
+        </div>
+        <div id="editor-area" class="active">
+            <div id="editor-box">
+                <textarea id="codeInput"></textarea>
+            </div>
+        </div>
+        <div id="preview-area">
+            <iframe id="preview-frame"></iframe>
+        </div>
+        <div id="about-area">
+            <div id="about-content">
+                <h2>RedEditor IDE</h2>
+                <p><b>Версия:</b> 0.0.3</p>
+                <p><b>Разработчик:</b> Fleen5177</p>
+                <p><b>Исходный код:</b> <a href="https://github.com/Fleen5l77/RedEditor" style="color: var(--accent);">GitHub</a></p>
+                <p><b>Описание:</b> Лёгкая IDE для веб-разработки с поддержкой HTML, CSS, JS, интеграцией ИИ и модульной архитектурой.</p>
+                <p>используемые библиотеки:</p>
+                <a href="https://github.com/playerony/indexeddb-fs" style="color: var(--accent);">indexedDB-fs (мод от Igor2677)</a>
+                <a href="https://github.com/codemirror/codemirror5" style="color: var(--accent);">CodeMirror</a>
+            </div>
+        </div>
+    </div>
+    <div id="right-panel">
+        <button id="right-panel-toggle" onclick="toggleRightPanel()">⮜</button>
+        <div id="right-panel-tabs">
+            <button class="right-tab selected" id="right-tab-preview" onclick="showRightTab('preview')">Предпросмотр</button>
+            <button class="right-tab" id="right-tab-ai" onclick="showRightTab('ai')">ИИ</button>
+        </div>
+        <div id="right-panel-content">
+            <div id="right-panel-preview" class="right-panel-tab-content">
+                <iframe id="right-preview-frame" style="width:100%;height:300px;border:1px solid var(--border);background:#fff;"></iframe>
+            </div>
+            <div id="right-panel-ai" class="right-panel-tab-content" style="display:none;">
+                <textarea id="ai-userprompt" placeholder="Ваш вопрос..." style="width:100%;min-height:40px;margin-bottom:8px;background:var(--editor);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:8px;font-size:15px;"></textarea>
+                <button id="ai-showcode" onclick="toggleAICode()">Включить код</button>
+                <button onclick="generateAI()">Сгенерировать</button>
+                <button id="ai-apply" onclick="applyAIResult()">Применить</button>
+                <textarea id="ai-result" readonly></textarea>
+                <pre id="ai-code" style="display:none;"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="file-dialog">
+    <input type="text" id="file-path" placeholder="Путь к файлу (например, my_directory/my_file.txt)">
+    <button onclick="confirmFileAction()">ОК</button>
+    <button onclick="closeFileDialog()">Отмена</button>
+</div>
+<script>
+function b64_to_utf8(str) {
+    try { return decodeURIComponent(escape(window.atob(str))); } catch { return ''; }
+}
+function utf8_to_b64(str) {
+    try { return window.btoa(unescape(encodeURIComponent(str))); } catch { return ''; }
+}
+
+let oreData = null;
+let currentFileType = 'HTML';
+let currentFileName = 'index';
+let projectFileName = '';
+let editor = null;
+let fileAction = '';
+let loadedModules = [];
+
+const previewFrame = document.getElementById('preview-frame');
+const fileInput = document.getElementById('fileInput');
+const fileList = document.getElementById('file-list');
+const projectName = document.getElementById('projectName');
+const fileDialog = document.getElementById('file-dialog');
+const filePathInput = document.getElementById('file-path');
+const moduleInput = document.getElementById('moduleInput');
+const fsModule = createFs();
+window.fs = fsModule;
+
+function initEditor() {
+    const codeInput = document.getElementById('codeInput');
+    editor = CodeMirror.fromTextArea(codeInput, {
+        lineNumbers: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        autoCloseTags: true,
+        foldGutter: true,
+        gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter', 'CodeMirror-lint-markers'],
+        theme: 'monokai',
+        mode: 'htmlmixed',
+        tabSize: 2,
+        indentWithTabs: false,
+        lint: {
+            getAnnotations: CodeMirror.lint.javascript,
+            async: true
+        },
+        extraKeys: {
+            'Ctrl-Space': 'autocomplete',
+            'Ctrl-/': 'toggleComment'
+        }
+    });
+    editor.on('change', function() {
+        if (!oreData || !currentFileType || !currentFileName) return;
+        oreData.res[currentFileType][currentFileName] = utf8_to_b64(editor.getValue());
+    });
+}
+
+function resizeEditor() {
+    const editorArea = document.getElementById('editor-area');
+    if (editorArea && editor) {
+        editor.setSize('100%', editorArea.offsetHeight);
+    }
+}
+window.addEventListener('resize', resizeEditor);
+
+function showTab(tab) {
+    document.getElementById('tab-editor').classList.remove('selected');
+    document.getElementById('tab-preview').classList.remove('selected');
+    document.getElementById('tab-about').classList.remove('selected');
+    document.getElementById('editor-area').classList.remove('active');
+    document.getElementById('preview-area').classList.remove('active');
+    document.getElementById('about-area').classList.remove('active');
+    if (tab === 'editor') {
+        document.getElementById('tab-editor').classList.add('selected');
+        document.getElementById('editor-area').classList.add('active');
+        editor.refresh();
+        resizeEditor();
+    } else if (tab === 'preview') {
+        document.getElementById('tab-preview').classList.add('selected');
+        document.getElementById('preview-area').classList.add('active');
+        updatePreview();
+    } else {
+        document.getElementById('tab-about').classList.add('selected');
+        document.getElementById('about-area').classList.add('active');
+    }
+}
+
+function showFileDialog(action) {
+    fileAction = action;
+    filePathInput.value = '';
+    fileDialog.style.display = 'block';
+    filePathInput.placeholder = action.includes('open') ? 'Путь к файлу' : 'Путь для сохранения';
+    if (action === 'open-pc') {
+        fileInput.click();
+    }
+}
+function closeFileDialog() {
+    fileDialog.style.display = 'none';
+}
+async function confirmFileAction() {
+    const path = filePathInput.value.trim();
+    if (!path && fileAction !== 'open-pc') return;
+    closeFileDialog();
+    if (fileAction === 'open-pc') {
+    } else if (fileAction === 'open-fs') {
+        try {
+            if (!fsModule) throw new Error('Библиотека fs недоступна');
+            const content = await fsModule.readFile(path);
+            if (path.endsWith('.ore')) {
+                loadOreFile(JSON.parse(content));
+            } else {
+                addFileToProject(path, content);
+            }
+        } catch (err) {
+            console.error('Ошибка чтения из ФС:', err);
+        }
+    } else if (fileAction === 'save-pc') {
+        if (path.endsWith('.ore')) {
+            saveOre();
+        } else {
+            saveFile(path);
+        }
+    } else if (fileAction === 'save-fs') {
+        try {
+            if (!fsModule) throw new Error('Библиотека fs недоступна');
+            if (path.endsWith('.ore')) {
+                await fsModule.writeFile(path, JSON.stringify(oreData, null, 4));
+            } else {
+                await fsModule.writeFile(path, editor.getValue());
+            }
+        } catch (err) {
+            console.error('Ошибка сохранения в ФС:', err);
+        }
+    }
+}
+fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        try {
+            if (file.name.endsWith('.ore')) {
+                loadOreFile(JSON.parse(evt.target.result));
+            } else {
+                addFileToProject(file.name, evt.target.result);
+            }
+        } catch (err) {
+            console.error('Ошибка чтения файла:', err);
+        }
+    };
+    reader.readAsText(file);
+});
+function loadOreFile(data) {
+    oreData = data;
+    projectFileName = '';
+    updateProjectName();
+    renderFileList();
+    selectFirstFile();
+}
+function addFileToProject(name, content) {
+    if (!oreData) createNewOre();
+    const ext = name.split('.').pop().toLowerCase();
+    let type = 'Other';
+    if (['html', 'htm'].includes(ext)) type = 'HTML';
+    else if (ext === 'css') type = 'CSS';
+    else if (ext === 'js') type = 'JS';
+    else if (['png', 'jpg', 'jpeg', 'gif'].includes(ext)) type = 'IMAGE';
+    else if (ext === 'ico') type = 'Icon';
+    if (!oreData.res[type]) {
+        oreData.res[type] = {};
+        oreData.rsList.push({ name: type, content: [] });
+    }
+    oreData.res[type][name] = utf8_to_b64(content);
+    oreData.rsList.find(rs => rs.name === type).content.push({ name, origname: name });
+    selectFile(type, name);
+}
+function saveFile(name) {
+    const content = editor.getValue();
+    const blob = new Blob([content], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name || 'file.txt';
+    a.click();
+}
+
+function installModule() {
+    moduleInput.value = '';
+    moduleInput.click();
+}
+moduleInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        try {
+            const url = URL.createObjectURL(file);
+            const script = document.createElement('script');
+            script.src = url;
+            script.onload = () => {
+                loadedModules.push({ name: file.name, url });
+                console.log(`Модуль ${file.name} загружен`);
+            };
+            document.head.appendChild(script);
+        } catch (err) {
+            console.error('Ошибка загрузки модуля:', err);
+        }
+    };
+    reader.readAsText(file);
+});
+
+function saveOre() {
+    if (!oreData) return;
+    const blob = new Blob([JSON.stringify(oreData, null, 4)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = projectFileName || 'project.ore';
+    a.click();
+}
+
+function createNewOre() {
+    oreData = {
+        res: { 
+            CSS: {}, 
+            HTML: { index: utf8_to_b64('<!DOCTYPE html>\n<html><head><title>RedEditor</title></head><body><h1>RedEditor</h1></body></html>') }, 
+            Icon: {}, 
+            IMAGE: {}, 
+            JS: {},
+            Other: {}
+        },
+        rsList: [
+            { name: 'CSS', content: [] },
+            { name: 'HTML', content: [{ name: 'index', origname: 'index.html' }] },
+            { name: 'Icon', content: [] },
+            { name: 'IMAGE', content: [] },
+            { name: 'JS', content: [] },
+            { name: 'Other', content: [] }
+        ],
+        main: ' Main '
+    };
+    projectFileName = '';
+    updateProjectName();
+    renderFileList();
+    selectFirstFile();
+}
+
+function updateProjectName() {
+    projectName.textContent = projectFileName ? 'Файл: ' + projectFileName : 'Новый проект';
+}
+
+function renderFileList() {
+    fileList.innerHTML = '';
+    if (!oreData || !oreData.res) return;
+    const typeColors = {
+        HTML: 'file-type-html',
+        CSS: 'file-type-css',
+        JS: 'file-type-js',
+        IMAGE: 'file-type-image',
+        Icon: 'file-type-icon',
+        Other: ''
+    };
+    for (const type of Object.keys(oreData.res)) {
+        if (Object.keys(oreData.res[type]).length === 0) continue;
+        const h3 = document.createElement('h3');
+        h3.textContent = type;
+        fileList.appendChild(h3);
+        for (const name of Object.keys(oreData.res[type])) {
+            const div = document.createElement('div');
+            div.className = `file-item ${typeColors[type] || ''}` + (type === currentFileType && name === currentFileName ? ' selected' : '');
+            div.textContent = name;
+            div.onclick = () => selectFile(type, name);
+            fileList.appendChild(div);
+        }
+    }
+}
+
+function selectFile(type, name) {
+    currentFileType = type;
+    currentFileName = name;
+    renderFileList();
+    updateEditor();
+}
+function selectFirstFile() {
+    for (const type of Object.keys(oreData.res)) {
+        const names = Object.keys(oreData.res[type]);
+        if (names.length > 0) {
+            selectFile(type, names[0]);
+            return;
+        }
+    }
+}
+
+function updateEditor() {
+    if (!oreData || !currentFileType || !currentFileName) return;
+    const b64 = oreData.res[currentFileType][currentFileName];
+    const value = b64_to_utf8(b64 || '');
+    editor.setValue(value);
+    const mode = currentFileType === 'HTML' ? 'htmlmixed' : currentFileType === 'CSS' ? 'css' : currentFileType === 'JS' ? 'javascript' : 'text/plain';
+    editor.setOption('mode', mode);
+    editor.setOption('lint', currentFileType === 'JS' ? { getAnnotations: CodeMirror.lint.javascript, async: true } : false);
+    editor.refresh();
+}
+
+function updatePreview() {
+    let html = '';
+    if (oreData && oreData.res && oreData.res.HTML && oreData.res.HTML.index) {
+        try {
+            html = b64_to_utf8(oreData.res.HTML.index.trim());
+        } catch (e) {
+            html = '<b>Ошибка декодирования base64!</b>';
+        }
+    }
+    const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+}
+
+const rightPanel = document.getElementById('right-panel');
+const rightPanelToggle = document.getElementById('right-panel-toggle');
+const rightTabPreview = document.getElementById('right-tab-preview');
+const rightTabAI = document.getElementById('right-tab-ai');
+const rightPanelPreview = document.getElementById('right-panel-preview');
+const rightPanelAI = document.getElementById('right-panel-ai');
+const rightPreviewFrame = document.getElementById('right-preview-frame');
+const aiResult = document.getElementById('ai-result');
+const aiCode = document.getElementById('ai-code');
+const rightShowCode = document.getElementById('ai-showcode');
+
+function toggleRightPanel() {
+    rightPanel.classList.toggle('open');
+    rightPanelToggle.innerText = rightPanel.classList.contains('open') ? '⮞' : '⮜';
+}
+function showRightTab(tab) {
+    rightTabPreview.classList.remove('selected');
+    rightTabAI.classList.remove('selected');
+    rightPanelPreview.style.display = 'none';
+    rightPanelAI.style.display = 'none';
+    if (tab === 'preview') {
+        rightTabPreview.classList.add('selected');
+        rightPanelPreview.style.display = '';
+        let html = '';
+        if (oreData && oreData.res && oreData.res.HTML && oreData.res.HTML.index) {
+            try {
+                html = b64_to_utf8(oreData.res.HTML.index.trim());
+            } catch (e) {
+                html = '<b>Ошибка декодирования base64!</b>';
+            }
+        }
+        const doc = rightPreviewFrame.contentDocument || rightPreviewFrame.contentWindow.document;
+        doc.open();
+        doc.write(html);
+        doc.close();
+    } else {
+        rightTabAI.classList.add('selected');
+        rightPanelAI.style.display = '';
+    }
+}
+
+const AI_HIDDEN_PROMPT = `Ты чат-бот для помощи с кодом. Отвечай кратко, по делу, только по теме программирования. Если пользователь просит пример, пиши только код, без пояснений.`;
+let aiIncludeCode = false;
+const aiUserPrompt = document.getElementById('ai-userprompt');
+
+function toggleAICode() {
+    aiIncludeCode = !aiIncludeCode;
+    rightShowCode.textContent = aiIncludeCode ? 'Исключить код' : 'Включить код';
+}
+function generateAI() {
+    aiResult.value = 'Генерация...';
+    aiCode.style.display = 'none';
+    let prompt = AI_HIDDEN_PROMPT;
+    if (aiIncludeCode) {
+        const code = editor.getValue();
+        prompt += `\n\nКод пользователя (${currentFileType}/${currentFileName}):\n\`\`\`${currentFileType.toLowerCase()}\n${code}\n\`\`\``;
+    }
+    const userText = aiUserPrompt.value.trim();
+    if (userText) prompt += '\n\nВопрос пользователя: ' + userText;
+    fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt))
+        .then(r => r.text())
+        .then(text => {
+            aiResult.value = text;
+            aiCode.textContent = text;
+        })
+        .catch(() => {
+            aiResult.value = 'Ошибка запроса к ИИ';
+        });
+}
+function applyAIResult() {
+    const result = aiResult.value.trim();
+    if (result) {
+        editor.setValue(result);
+        oreData.res[currentFileType][currentFileName] = utf8_to_b64(result);
+    }
+}
+
+window.addEventListener('resize', () => editor.refresh());
+
+initEditor();
+resizeEditor();
+rightPanel.classList.remove('open');
+showRightTab('preview');
+createNewOre();
+showTab('editor');
+</script>
+</body>
+</html>
